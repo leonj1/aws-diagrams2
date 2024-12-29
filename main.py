@@ -217,6 +217,11 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
+    
+    # if output has a .png extension, remove it
+    if args.output.endswith(".png"):
+        print("Removing .png extension from output filename")
+        args.output = args.output[:-4]
 
     try:
         # Read terraform files
