@@ -5,6 +5,7 @@ import argparse
 from terraform_reader import get_terraform_contents
 from terraform_hierarchy import create_aws_hierarchy
 from diagram_generator import create_diagram
+from aws_parent_resources import is_parent_resource
 from typing import Dict, Any, List, Tuple
 
 def _get_node_class(resource_type: str) -> str:
@@ -37,17 +38,27 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     else:
         node = node_data
     
-    # Skip cloud and region nodes
-    if node.get("type") in ["aws-cloud", "region"]:
+    # Get node type and convert to AWS resource format
+    node_type = node.get("type", "")
+    
+    # Handle special cases and parent resources
+    if node_type in ["aws-cloud", "region"]:
+        # Process cloud and region children
         if "children" in node:
             for child in node["children"].values():
                 child_lines, child_vars = _process_node(child, indent)
                 lines.extend(child_lines)
                 vars.extend(child_vars)
         return lines, vars
+    elif node_type == "VPC":
+        # VPC is always a cluster
+        is_cluster = True
+    else:
+        # Convert type to AWS resource format (e.g., "aws-ecs-cluster" -> "aws_ecs_cluster")
+        resource_type = f"aws_{node_type.lower().replace('-', '_')}"
+        is_cluster = is_parent_resource(resource_type)
     
-    # Create cluster for VPC and subnet
-    if node["type"] in ["VPC", "aws-subnet"]:
+    if is_cluster:
         lines.append(f"{indent_str}with Cluster(")
         lines.append(f'{indent_str}    "{node["name"]} ({node["type"]})",')
         lines.append(f"{indent_str}    graph_attr={{")
@@ -101,6 +112,15 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                     vars.extend(child_vars)
     
     return lines, vars
+
+can_be_parent = [
+    "aws-cloud",
+    "region",
+    "aws-vpc",
+    "aws-subnet",
+    "aws-ecs-cluster",
+    "aws-ecs-service",
+]
 
 def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_architecture") -> str:
     """
