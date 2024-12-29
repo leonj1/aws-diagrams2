@@ -45,80 +45,58 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
         }
         vpc_children = region_children["aws-vpc"]["children"]
         
-        # Add route table
-        route_tables = [r for r in resources if r.identifier.startswith("aws_route_table.")]
-        if route_tables:
-            vpc_children["aws-route-table"] = {
-                "name": "Route Table",
-                "type": "aws-route-table",
-                "children": {}
-            }
+        # Add VPC-level resources
+        resource_types = [
+            ("aws-route-table", "Route Table", "aws_route_table."),
+            ("aws-route-table-association", "Route Table Association", "aws_route_table_association."),
+            ("aws-iam-role", "IAM Role", "aws_iam_role."),
+            ("aws-iam-role-policy-attachment", "IAM Role Policy Attachment", "aws_iam_role_policy_attachment."),
+            ("aws-security-group", "AWS Security Group", "aws_security_group."),
+        ]
         
-        # Add route table association
-        rt_associations = [r for r in resources if r.identifier.startswith("aws_route_table_association.")]
-        if rt_associations:
-            vpc_children["aws-route-table-association"] = {
-                "name": "Route Table Association",
-                "type": "aws-route-table-association",
-                "children": {}
-            }
+        for type_key, display_name, prefix in resource_types:
+            matching_resources = [r for r in resources if r.identifier.startswith(prefix)]
+            if matching_resources:
+                vpc_children[type_key] = {
+                    "name": display_name,
+                    "type": type_key,
+                    "children": {}
+                }
         
-        # Add IAM role
-        iam_roles = [r for r in resources if r.identifier.startswith("aws_iam_role.")]
-        if iam_roles:
-            vpc_children["aws-iam-role"] = {
-                "name": "IAM Role",
-                "type": "aws-iam-role",
-                "children": {}
-            }
-        
-        # Add IAM role policy attachment
-        policy_attachments = [r for r in resources if r.identifier.startswith("aws_iam_role_policy_attachment.")]
-        if policy_attachments:
-            vpc_children["aws-iam-role-policy-attachment"] = {
-                "name": "IAM Role Policy Attachment",
-                "type": "aws-iam-role-policy-attachment",
-                "children": {}
-            }
-        
-        # Add security group
-        security_groups = [r for r in resources if r.identifier.startswith("aws_security_group.")]
-        if security_groups:
-            vpc_children["aws-security-group"] = {
-                "name": "AWS Security Group",
-                "type": "aws-security-group",
-                "children": {}
-            }
-        
-        # Add subnet if it exists
-        subnets = [r for r in resources if r.identifier.startswith("aws_subnet.")]
-        if subnets:
-            vpc_children["aws-subnet"] = {
-                "name": "subnet",
-                "type": "Subnet",
-                "children": {}
-            }
-            subnet_children = vpc_children["aws-subnet"]["children"]
-        
-        # Add ECS cluster (either under subnet if it exists, or under VPC)
+        # Get ECS-related resources
         ecs_clusters = [r for r in resources if r.identifier.startswith("aws_ecs_cluster.")]
+        ecs_services = [r for r in resources if r.identifier.startswith("aws_ecs_service.")]
+        task_definitions = [r for r in resources if r.identifier.startswith("aws_ecs_task_definition.")]
+        subnets = [r for r in resources if r.identifier.startswith("aws_subnet.")]
+        
+        # Determine where to place ECS resources
         if ecs_clusters:
-            ecs_cluster_node = {
-                "name": "ECS Cluster",
-                "type": "aws-ecs-cluster",
-                "children": {}
-            }
-            
-            # Place ECS cluster in appropriate parent
             if subnets:
-                subnet_children["aws-ecs-cluster"] = ecs_cluster_node
+                # Add subnet and its children
+                vpc_children["aws-subnet"] = {
+                    "name": "subnet",
+                    "type": "Subnet",
+                    "children": {}
+                }
+                subnet_children = vpc_children["aws-subnet"]["children"]
+                
+                # Add ECS cluster under subnet
+                subnet_children["aws-ecs-cluster"] = {
+                    "name": "ECS Cluster",
+                    "type": "aws-ecs-cluster",
+                    "children": {}
+                }
                 cluster_children = subnet_children["aws-ecs-cluster"]["children"]
             else:
-                vpc_children["aws-ecs-cluster"] = ecs_cluster_node
+                # Add ECS cluster directly under VPC
+                vpc_children["aws-ecs-cluster"] = {
+                    "name": "ECS Cluster",
+                    "type": "aws-ecs-cluster",
+                    "children": {}
+                }
                 cluster_children = vpc_children["aws-ecs-cluster"]["children"]
             
-            # Add ECS service if it exists
-            ecs_services = [r for r in resources if r.identifier.startswith("aws_ecs_service.")]
+            # Add ECS service under cluster if it exists
             if ecs_services:
                 cluster_children["aws-ecs-service"] = {
                     "name": "ECS Service",
@@ -127,8 +105,7 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
                 }
                 service_children = cluster_children["aws-ecs-service"]["children"]
                 
-                # Add ECS task definition if it exists
-                task_definitions = [r for r in resources if r.identifier.startswith("aws_ecs_task_definition.")]
+                # Add ECS task definition under service if it exists
                 if task_definitions:
                     service_children["aws-ecs-task-definition"] = {
                         "name": "ECS Task Definition",
