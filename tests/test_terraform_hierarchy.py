@@ -7,8 +7,7 @@ def test_empty_terraform():
     """Test hierarchy creation with empty terraform content."""
     result = create_aws_hierarchy("")
     assert "aws-cloud" in result
-    assert "region" in result["aws-cloud"]["children"]
-    assert result["aws-cloud"]["children"]["region"]["children"] == {}
+    assert result["aws-cloud"]["children"] == {}
 
 
 def test_basic_vpc():
@@ -17,6 +16,10 @@ def test_basic_vpc():
 ================
 File: main.tf
 ================
+provider "aws" {
+  region = "us-east-1"
+}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -25,18 +28,72 @@ resource "aws_vpc" "main" {
     
     # Verify basic structure
     assert "aws-cloud" in result
-    assert "region" in result["aws-cloud"]["children"]
-    region_children = result["aws-cloud"]["children"]["region"]["children"]
+    region_key = "region-us-east-1"
+    assert region_key in result["aws-cloud"]["children"]
+    region_children = result["aws-cloud"]["children"][region_key]["children"]
     
     # Verify VPC
     assert "aws-vpc" in region_children
-    assert region_children["aws-vpc"]["name"] == "VPC"
+    assert region_children["aws-vpc"]["name"] == "VPC (us-east-1)"
     assert region_children["aws-vpc"]["type"] == "VPC"
 
+
+def test_multi_region_providers():
+    """Test hierarchy creation with multiple AWS regions."""
+    content = '''
+================
+File: providers.tf
+================
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
+provider "aws" {
+  alias  = "us_east_2"
+  region = "us-east-2"
+}
+
+================
+File: vpc.tf
+================
+resource "aws_vpc" "east1" {
+  provider = aws.us_east_1
+  cidr_block = "10.0.0.0/16"
+}
+
+resource "aws_vpc" "east2" {
+  provider = aws.us_east_2
+  cidr_block = "172.16.0.0/16"
+}
+'''
+    result = create_aws_hierarchy(content)
+    
+    # Verify both regions exist
+    children = result["aws-cloud"]["children"]
+    assert "region-us-east-1" in children
+    assert "region-us-east-2" in children
+    
+    # Verify VPCs in correct regions
+    east1_children = children["region-us-east-1"]["children"]
+    east2_children = children["region-us-east-2"]["children"]
+    
+    assert "aws-vpc" in east1_children
+    assert east1_children["aws-vpc"]["name"] == "VPC (us-east-1)"
+    
+    assert "aws-vpc" in east2_children
+    assert east2_children["aws-vpc"]["name"] == "VPC (us-east-2)"
 
 def test_full_ecs_structure():
     """Test hierarchy creation with a full ECS infrastructure."""
     content = '''
+================
+File: provider.tf
+================
+provider "aws" {
+  region = "us-east-1"
+}
+
 ================
 File: ecs.tf
 ================
@@ -188,63 +245,63 @@ resource "aws_ecs_service" "react_app" {
     "type": "aws-cloud",
     "name": "AWS Cloud",
     "children": {
-      "region": {
+      "region-us-east-1": {
         "type": "region",
-        "name": "AWS Region",
+        "name": "AWS Region (us-east-1)",
         "children": {
         	"aws-vpc": {
-        		"name": "VPC",
+        		"name": "VPC (us-east-1)",
         		"type": "VPC",
         		"children": {
         			"aws-route-table": {
-        				"name": "Route Table",
+        				"name": "Route Table (us-east-1)",
         				"type": "aws-route-table",
         				"children": {
         				
         				}
         			},
         			"aws-route-table-association": {
-        				"name": "Route Table Association",
+        				"name": "Route Table Association (us-east-1)",
         				"type": "aws-route-table-association",
         				"children": {
         				
         				}
         			},
         			"aws-iam-role": {
-        				"name": "IAM Role",
+        				"name": "IAM Role (us-east-1)",
         				"type": "aws-iam-role",
         				"children": {
         				
         				}
         			},
         			"aws-iam-role-policy-attachment": {
-        				"name": "IAM Role Policy Attachment",
+        				"name": "IAM Role Policy Attachment (us-east-1)",
         				"type": "aws-iam-role-policy-attachment",
         				"children": {
         				
         				}
         			},
         			"aws-security-group": {
-        				"name": "AWS Security Group",
+        				"name": "AWS Security Group (us-east-1)",
         				"type": "aws-security-group",
         				"children": {
         				
         				}
         			},
         			"aws-subnet": {
-        				"name": "subnet",
+        				"name": "Subnet (us-east-1)",
         				"type": "Subnet",
         				"children": {
 		        			"aws-ecs-cluster": {
-		        				"name": "ECS Cluster",
+		        				"name": "ECS Cluster (us-east-1)",
 		        				"type": "aws-ecs-cluster",
 		        				"children": {
 				        			"aws-ecs-service": {
-				        				"name": "ECS Service",
+				        				"name": "ECS Service (us-east-1)",
 				        				"type": "aws-ecs-service",
 				        				"children": {
 						        			"aws-ecs-task-definition": {
-						        				"name": "ECS Task Definition",
+						        				"name": "ECS Task Definition (us-east-1)",
 						        				"type": "aws-ecs-task-definition",
 						        				"children": {
 						        				
@@ -280,63 +337,63 @@ def test_full_ecs_structure2():
     "type": "aws-cloud",
     "name": "AWS Cloud",
     "children": {
-      "region": {
+      "region-us-east-1": {
         "type": "region",
-        "name": "AWS Region",
+        "name": "AWS Region (us-east-1)",
         "children": {
         	"aws-vpc": {
-        		"name": "VPC",
+        		"name": "VPC (us-east-1)",
         		"type": "VPC",
         		"children": {
         			"aws-route-table": {
-        				"name": "Route Table",
+        				"name": "Route Table (us-east-1)",
         				"type": "aws-route-table",
         				"children": {
         				
         				}
         			},
         			"aws-route-table-association": {
-        				"name": "Route Table Association",
+        				"name": "Route Table Association (us-east-1)",
         				"type": "aws-route-table-association",
         				"children": {
         				
         				}
         			},
         			"aws-iam-role": {
-        				"name": "IAM Role",
+        				"name": "IAM Role (us-east-1)",
         				"type": "aws-iam-role",
         				"children": {
         				
         				}
         			},
         			"aws-iam-role-policy-attachment": {
-        				"name": "IAM Role Policy Attachment",
+        				"name": "IAM Role Policy Attachment (us-east-1)",
         				"type": "aws-iam-role-policy-attachment",
         				"children": {
         				
         				}
         			},
         			"aws-security-group": {
-        				"name": "AWS Security Group",
+        				"name": "AWS Security Group (us-east-1)",
         				"type": "aws-security-group",
         				"children": {
         				
         				}
         			},
         			"aws-subnet": {
-        				"name": "subnet",
+        				"name": "Subnet (us-east-1)",
         				"type": "Subnet",
         				"children": {
 		        			"aws-ecs-cluster": {
-		        				"name": "ECS Cluster",
+		        				"name": "ECS Cluster (us-east-1)",
 		        				"type": "aws-ecs-cluster",
 		        				"children": {
 				        			"aws-ecs-service": {
-				        				"name": "ECS Service",
+				        				"name": "ECS Service (us-east-1)",
 				        				"type": "aws-ecs-service",
 				        				"children": {
 						        			"aws-ecs-task-definition": {
-						        				"name": "ECS Task Definition",
+						        				"name": "ECS Task Definition (us-east-1)",
 						        				"type": "aws-ecs-task-definition",
 						        				"children": {
 						        				
@@ -387,6 +444,13 @@ def test_multiple_files():
     """Test hierarchy creation with resources spread across multiple files."""
     content = '''
 ================
+File: provider.tf
+================
+provider "aws" {
+  region = "us-east-1"
+}
+
+================
 File: vpc.tf
 ================
 resource "aws_vpc" "main" {
@@ -410,15 +474,15 @@ resource "aws_security_group" "app" {
     result = create_aws_hierarchy(content)
     
     # Verify resources from different files are properly organized
-    region_children = result["aws-cloud"]["children"]["region"]["children"]
+    region_children = result["aws-cloud"]["children"]["region-us-east-1"]["children"]
     vpc_children = region_children["aws-vpc"]["children"]
     
     # Verify security group is under VPC
     assert "aws-security-group" in vpc_children
-    assert vpc_children["aws-security-group"]["name"] == "AWS Security Group"
+    assert vpc_children["aws-security-group"]["name"] == "AWS Security Group (us-east-1)"
     assert vpc_children["aws-security-group"]["type"] == "aws-security-group"
     
     # Verify ECS cluster is at the VPC level since no subnet is defined
     assert "aws-ecs-cluster" in vpc_children
-    assert vpc_children["aws-ecs-cluster"]["name"] == "ECS Cluster"
+    assert vpc_children["aws-ecs-cluster"]["name"] == "ECS Cluster (us-east-1)"
     assert vpc_children["aws-ecs-cluster"]["type"] == "aws-ecs-cluster"

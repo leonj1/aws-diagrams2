@@ -47,7 +47,7 @@ def _get_cluster_color(node_type: str) -> str:
         node_type = "aws-vpc"
     return clusters.get(node_type, "#F5F5F5")  # Default to light gray
 
-def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str], List[str]]:
+def _process_node(node_data: Dict[str, Any], indent: int = 1, region: str = None) -> Tuple[List[str], List[str]]:
     """Process a node in the hierarchy and return its script lines and variable declarations."""
     lines = []
     vars = []
@@ -63,11 +63,40 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     node_type = node.get("type", "")
     
     # Handle special cases and parent resources
-    if node_type in ["aws-cloud", "region"]:
-        # Process cloud and region children
+    if node_type == "aws-cloud":
+        # Process cloud children
         if "children" in node:
             for child in node["children"].values():
-                child_lines, child_vars = _process_node(child, indent)
+                child_lines, child_vars = _process_node(child, indent, region)
+                lines.extend(child_lines)
+                vars.extend(child_vars)
+        return lines, vars
+    
+    # Handle region nodes (keys starting with "region-")
+    if node_type == "region":
+        # Extract region name from node name
+        region_name = node["name"].split("(")[-1].strip(")")
+        
+        # Create region cluster
+        lines.append(f"{indent_str}with Cluster(")
+        lines.append(f'{indent_str}    "Region: {region_name}",')
+        lines.append(f"{indent_str}    graph_attr={{")
+        lines.append(f'{indent_str}        "style": "rounded",')
+        lines.append(f'{indent_str}        "bgcolor": "{_get_cluster_color("region")}",')
+        lines.append(f'{indent_str}        "pencolor": "#666666",')
+        lines.append(f'{indent_str}        "penwidth": "2.0",')
+        lines.append(f'{indent_str}        "fontsize": "14",')
+        lines.append(f'{indent_str}        "margin": "20"')
+        lines.append(f"{indent_str}    }}")
+        lines.append(f"{indent_str}):")
+        lines.append(f"{indent_str}    _dummy = General('dummy')  # Region: {region_name}")
+        
+        # Process region children
+        if "children" in node:
+            for child in node["children"].values():
+                # Extract region from node name
+                region_name = node["name"].split("(")[-1].strip(")")
+                child_lines, child_vars = _process_node(child, indent + 1, region_name)
                 lines.extend(child_lines)
                 vars.extend(child_vars)
         return lines, vars
@@ -89,12 +118,13 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
         lines.append(f'{indent_str}        "margin": "15"')
         lines.append(f"{indent_str}    }}")
         lines.append(f"{indent_str}):")
+        lines.append(f"{indent_str}    _dummy = General('dummy')  # {node['name']}")
         
         # Process children
         if "children" in node:
             child_vars_by_type = {}
             for child in node["children"].values():
-                child_lines, child_vars = _process_node(child, indent + 1)
+                child_lines, child_vars = _process_node(child, indent + 1, region)
                 lines.extend(child_lines)
                 child_type = child["type"]
                 if child_type not in child_vars_by_type:
@@ -107,8 +137,9 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                     for i in range(len(child_vars) - 1):
                         lines.append(f"{indent_str}    {child_vars[i]} >> {child_vars[i+1]}")
     else:
-        # Create regular node
-        var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
+        # Create regular node with region-specific name
+        region_suffix = region.replace("-", "_")
+        var_name = f"{node['type'].lower().replace('-', '_')}_{region_suffix}_{len(vars)}"
         node_class = _get_node_class(node["type"])
         lines.append(f'{indent_str}{var_name} = {node_class}("{node["name"]}")')
         vars.append(var_name)
@@ -116,7 +147,7 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
         # Process children
         if "children" in node:
             for child in node["children"].values():
-                child_lines, child_vars = _process_node(child, indent)
+                child_lines, child_vars = _process_node(child, indent, region)
                 lines.extend(child_lines)
                 if child_vars:
                     lines.append(f"{indent_str}{var_name} >> {child_vars[0]}")
@@ -157,48 +188,63 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
         "from diagrams.aws.management import ManagementAndGovernance",
         "",
         "# Create diagram",
-        'with Diagram(',
-        '    "AWS Architecture",',
-        f'    filename="{output_filename}",',
-        '    show=False,',
-        '    direction="TB",',
-        "    graph_attr={",
-        '        "splines": "ortho",     # Orthogonal connections',
-        '        "nodesep": "1.0",       # Node separation',
-        '        "ranksep": "2.0",       # Rank separation',
-        '        "pad": "2.5",           # Padding',
-        '        "concentrate": "true",   # Merge parallel edges',
-        '        "compound": "true",      # Enable cluster connections',
-        '        "rankdir": "TB",        # Top to bottom direction',
-        '        "ordering": "out"       # Maintain order of connections',
-        "    },",
-        "    node_attr={",
-        '        "fontsize": "12",       # Node label font size',
-        '        "margin": "1.2",        # Significantly increased margin for label spacing',
-        '        "height": "1.2",        # Node height',
-        '        "width": "1.8",         # Node width',
-        '        "labelloc": "b",        # Place label below node',
-        '        "imagepos": "tc",       # Image at top-center',
-        '        "labeldistance": "3.0", # Increased distance between node and label',
-        '        "labelspacing": "2.0",  # Increased space between node and label',
-        '        "nodesep": "1.5"        # Increased separation between nodes',
-        "    },",
-        "    edge_attr={",
-        '        "minlen": "2",          # Minimum edge length',
-        '        "penwidth": "2.0",      # Edge thickness',
-        '        "color": "#666666"      # Edge color',
-        "    }",
-        "):"
+        "graph_attr = {",
+        '    "splines": "ortho",     # Orthogonal connections',
+        '    "nodesep": "2.0",       # Node separation',
+        '    "ranksep": "3.0",       # Rank separation',
+        '    "pad": "3.0",           # Padding',
+        '    "concentrate": "true",   # Merge parallel edges',
+        '    "compound": "true",      # Enable cluster connections',
+        '    "rankdir": "TB",        # Top to bottom direction',
+        '    "ordering": "out"       # Maintain order of connections',
+        "}",
+        "",
+        "node_attr = {",
+        '    "fontsize": "12",       # Node label font size',
+        '    "margin": "1.5",        # Significantly increased margin for label spacing',
+        '    "height": "1.5",        # Node height',
+        '    "width": "2.0",         # Node width',
+        '    "labelloc": "b",        # Place label below node',
+        '    "imagepos": "tc",       # Image at top-center',
+        '    "labeldistance": "3.0", # Increased distance between node and label',
+        '    "labelspacing": "2.0",  # Increased space between node and label',
+        '    "nodesep": "1.5"        # Increased separation between nodes',
+        "}",
+        "",
+        "edge_attr = {",
+        '    "minlen": "2",          # Minimum edge length',
+        '    "penwidth": "2.0",      # Edge thickness',
+        '    "color": "#666666"      # Edge color',
+        "}",
+        "",
+        "",
     ]
     
-    # Process hierarchy
+    # Process hierarchy and prepare node lines
     node_lines, _ = _process_node(hierarchy)
     
-    # Add nodes or pass statement
+    # Add diagram creation
+    script_lines.append("def create_diagram():")
+    script_lines.append('    with Diagram(')
+    script_lines.append('        "AWS Architecture",')
+    script_lines.append(f'        filename="{output_filename}",')
+    script_lines.append('        show=False,')
+    script_lines.append('        direction="TB",')
+    script_lines.append('        graph_attr=graph_attr,')
+    script_lines.append('        node_attr=node_attr,')
+    script_lines.append('        edge_attr=edge_attr')
+    script_lines.append('    ) as diagram:')
+    # Add nodes with proper indentation
     if node_lines:
+        # Adjust indentation for all node lines
+        node_lines = ['        ' + line for line in node_lines]
         script_lines.extend(node_lines)
     else:
-        script_lines.append("    pass  # No nodes to render")
+        script_lines.append('        pass')
+    script_lines.append("")
+    script_lines.append("if __name__ == '__main__':")
+    script_lines.append("    create_diagram()")
+    script_lines.append("")
     
     # Join all lines
     script = "\n".join(script_lines)

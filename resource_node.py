@@ -15,6 +15,7 @@ class ResourceNode:
     name: str
     identifier: str
     is_parent: bool
+    region: str = "us-east-1"  # Default region if not specified
     
     def __post_init__(self):
         """Validate the node attributes after initialization."""
@@ -52,7 +53,8 @@ class ResourceNode:
         return {
             "name": self.name,
             "identifier": self.identifier,
-            "is_parent": self.is_parent
+            "is_parent": self.is_parent,
+            "region": self.region
         }
     
     @classmethod
@@ -70,6 +72,7 @@ class ResourceNode:
             ValueError: If required fields are missing
         """
         required_fields = {'name', 'identifier', 'is_parent'}
+        optional_fields = {'region'}
         missing_fields = required_fields - set(data.keys())
         
         if missing_fields:
@@ -78,5 +81,6 @@ class ResourceNode:
         return cls(
             name=data['name'],
             identifier=data['identifier'],
-            is_parent=data['is_parent']
+            is_parent=data['is_parent'],
+            region=data.get('region', 'us-east-1')  # Use default if not provided
         )

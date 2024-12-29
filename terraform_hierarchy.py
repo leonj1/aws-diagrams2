@@ -13,39 +13,45 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Hierarchical JSON structure of AWS resources
     """
-    # Parse terraform content into ResourceNodes
-    resources = parse_terraform_files(terraform_content)
+    # Parse terraform content into providers and ResourceNodes
+    providers, resources = parse_terraform_files(terraform_content)
     
     # Create base hierarchy structure
     hierarchy = {
         "aws-cloud": {
             "type": "aws-cloud",
             "name": "AWS Cloud",
-            "children": {
-                "region": {
-                    "type": "region",
-                    "name": "AWS Region",
-                    "children": {}
-                }
-            }
+            "children": {}
         }
     }
     
-    # Get reference to region's children for easier access
-    region_children = hierarchy["aws-cloud"]["children"]["region"]["children"]
+    # Create a region node for each provider
+    cloud_children = hierarchy["aws-cloud"]["children"]
+    region_children = {}
     
-    # Process VPC first as it's the top-level resource
-    vpc_resources = [r for r in resources if r.identifier.startswith("aws_vpc.")]
-    if vpc_resources:
-        vpc = vpc_resources[0]  # Assume single VPC for this implementation
-        region_children["aws-vpc"] = {
-            "name": "VPC",
+    # Sort providers by region to ensure consistent ordering
+    for provider_alias, region in sorted(providers.items(), key=lambda x: x[1]):
+        region_key = f"region-{region}"
+        if region_key not in cloud_children:
+            cloud_children[region_key] = {
+                "type": "region",
+                "name": f"AWS Region ({region})",
+                "children": {}
+            }
+        region_children[region] = cloud_children[region_key]["children"]
+        
+        # Initialize VPC structure for each region
+        region_children[region]["aws-vpc"] = {
+            "name": f"VPC ({region})",
             "type": "VPC",
             "children": {}
         }
-        vpc_children = region_children["aws-vpc"]["children"]
+    
+    # Process resources by region
+    for region in region_children:
+        vpc_children = region_children[region]["aws-vpc"]["children"]
         
-        # Add VPC-level resources
+        # Add VPC-level resources for this region
         resource_types = [
             ("aws-route-table", "Route Table", "aws_route_table."),
             ("aws-route-table-association", "Route Table Association", "aws_route_table_association."),
@@ -55,28 +61,28 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
         ]
         
         for type_key, display_name, prefix in resource_types:
-            matching_resources = [r for r in resources if r.identifier.startswith(prefix)]
+            matching_resources = [r for r in resources if r.identifier.startswith(prefix) and r.region == region]
             if matching_resources:
                 vpc_children[type_key] = {
-                    "name": display_name,
+                    "name": f"{display_name} ({region})",
                     "type": type_key,
                     "children": {}
                 }
         
-        # Get ECS-related resources
-        ecs_clusters = [r for r in resources if r.identifier.startswith("aws_ecs_cluster.")]
-        ecs_services = [r for r in resources if r.identifier.startswith("aws_ecs_service.")]
-        task_definitions = [r for r in resources if r.identifier.startswith("aws_ecs_task_definition.")]
-        subnets = [r for r in resources if r.identifier.startswith("aws_subnet.")]
+        # Get ECS-related resources for this region
+        ecs_clusters = [r for r in resources if r.identifier.startswith("aws_ecs_cluster.") and r.region == region]
+        ecs_services = [r for r in resources if r.identifier.startswith("aws_ecs_service.") and r.region == region]
+        task_definitions = [r for r in resources if r.identifier.startswith("aws_ecs_task_definition.") and r.region == region]
+        subnets = [r for r in resources if r.identifier.startswith("aws_subnet.") and r.region == region]
         
-        # Handle ECS resources
+        # Handle ECS resources for this region
         if ecs_clusters:
             cluster_parent = vpc_children
             
             # If subnet exists, place ECS under subnet
             if subnets:
                 vpc_children["aws-subnet"] = {
-                    "name": "subnet",
+                    "name": f"Subnet ({region})",
                     "type": "Subnet",
                     "children": {}
                 }
@@ -84,7 +90,7 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
             
             # Add ECS cluster
             cluster_parent["aws-ecs-cluster"] = {
-                "name": "ECS Cluster",
+                "name": f"ECS Cluster ({region})",
                 "type": "aws-ecs-cluster",
                 "children": {}
             }
@@ -93,7 +99,7 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
             # Add ECS service under cluster
             if ecs_services:
                 cluster_children["aws-ecs-service"] = {
-                    "name": "ECS Service",
+                    "name": f"ECS Service ({region})",
                     "type": "aws-ecs-service",
                     "children": {}
                 }
@@ -102,7 +108,7 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
                 # Add ECS task definition under service
                 if task_definitions:
                     service_children["aws-ecs-task-definition"] = {
-                        "name": "ECS Task Definition",
+                        "name": f"ECS Task Definition ({region})",
                         "type": "aws-ecs-task-definition",
                         "children": {}
                     }
@@ -110,7 +116,7 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
         # Add subnet if it exists and wasn't added with ECS
         elif subnets:
             vpc_children["aws-subnet"] = {
-                "name": "subnet",
+                "name": f"Subnet ({region})",
                 "type": "Subnet",
                 "children": {}
             }
