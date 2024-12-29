@@ -16,7 +16,7 @@ def _get_node_class(resource_type: str) -> str:
         "VPC": "VPC",
         "aws-route-table": "RouteTable",
         "aws-route-table-association": "RouteTable",
-        "aws-subnet": "PrivateSubnet",
+        # "aws-subnet": "PrivateSubnet",  # Subnets are pure clusters, not nodes
         "aws-iam-role": "IAMRole",
         "aws-iam-role-policy-attachment": "IAMRole",
         "aws-security-group": "Nacl",
@@ -25,6 +25,20 @@ def _get_node_class(resource_type: str) -> str:
         "aws-ecs-task-definition": "Fargate"
     }
     return node_map.get(resource_type, "General")
+
+def is_cluster(resource_type: str) -> bool:
+    """Check if a resource type is a cluster by looking it up in the clusters dictionary.
+    
+    Args:
+        resource_type (str): The AWS resource type to check (e.g., 'aws-vpc', 'VPC')
+        
+    Returns:
+        bool: True if the resource type is a cluster, False otherwise
+    """
+    # Handle VPC case since it's capitalized in the hierarchy
+    if resource_type == "VPC":
+        resource_type = "aws-vpc"
+    return resource_type in clusters
 
 def _get_cluster_color(node_type: str) -> str:
     """Get the appropriate background color for a cluster type."""
@@ -57,18 +71,11 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                 lines.extend(child_lines)
                 vars.extend(child_vars)
         return lines, vars
-    elif node_type == "VPC":
-        # VPC is always a cluster
-        is_cluster = True
-    elif node_type in ["aws-ecs-service", "aws-ecs-cluster"]:
-        # ECS Service and Cluster are always clusters without nodes
-        is_cluster = True
-    else:
-        # Convert type to AWS resource format (e.g., "aws-ecs-cluster" -> "aws_ecs_cluster")
-        resource_type = f"aws_{node_type.lower().replace('-', '_')}"
-        is_cluster = is_parent_resource(resource_type)
     
-    if is_cluster:
+    # Check if this resource is a cluster
+    is_cluster_resource = is_cluster(node_type)
+    
+    if is_cluster_resource:
         lines.append(f"{indent_str}with Cluster(")
         lines.append(f'{indent_str}    "{node["name"]} ({node["type"]})",')
         # Get cluster color based on node type
@@ -83,14 +90,14 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
         lines.append(f"{indent_str}    }}")
         lines.append(f"{indent_str}):")
         
-        # Create node (except for ECS services and clusters which are pure clusters)
-        if node["type"] not in ["aws-ecs-service", "aws-ecs-cluster"]:
+        # Create node for VPC (special case - both cluster and node)
+        if node_type == "VPC":
             var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
             node_class = _get_node_class(node["type"])
             lines.append(f'{indent_str}    {var_name} = {node_class}("{node["name"]}")')
             vars.append(var_name)
         
-        # Process children (with special handling for ECS service)
+        # Process children
         if "children" in node:
             child_vars_by_type = {}
             for child in node["children"].values():
@@ -106,7 +113,8 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                 if len(child_vars) > 1:
                     for i in range(len(child_vars) - 1):
                         lines.append(f"{indent_str}    {child_vars[i]} >> {child_vars[i+1]}")
-                if child_vars and node["type"] not in ["aws-ecs-service", "aws-ecs-cluster"]:
+                # Only add connections from VPC node to children
+                if child_vars and node_type == "VPC":
                     lines.append(f"{indent_str}    {var_name} >> {child_vars[0]}")
     else:
         # Create regular node
@@ -130,7 +138,7 @@ clusters = {
     "aws-cloud": "#F5F5F5",     # Light gray
     "region": "#F5F5F5",        # Light gray
     "aws-vpc": "#E8F4FA",       # Light blue
-    "aws-subnet": "#E6FFE6",    # Light green
+    "Subnet": "#E6FFE6",    # Light green
     "aws-ecs-cluster": "#FFF0E6", # Light orange
     "aws-ecs-service": "#F5E6FF"  # Light purple
 }
@@ -153,7 +161,7 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
         "#!/usr/bin/env python3",
         "from diagrams import Diagram, Cluster",
         "from diagrams.aws.compute import ECS, ElasticContainerServiceService, Fargate",
-        "from diagrams.aws.network import VPC, RouteTable, PrivateSubnet, InternetGateway, NATGateway, Nacl",
+        "from diagrams.aws.network import VPC, RouteTable, InternetGateway, NATGateway, Nacl",
         "from diagrams.aws.security import IAMRole, IAM",
         "from diagrams.aws.general import General",
         "from diagrams.aws.management import ManagementAndGovernance",

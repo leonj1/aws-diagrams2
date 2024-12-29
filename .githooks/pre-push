@@ -1,21 +1,16 @@
 #!/bin/bash
 
-# Store the current directory
-current_dir=$(pwd)
+# Exit on error
+set -e
 
-echo "Running tests before push..."
+echo "Running pre-push checks..."
 
-# Run make test
+# Run tests
 make test
 
-# Get the exit code of make test
-test_result=$?
+# Run linting
+make lint
 
-# If tests failed, prevent the push
-if [ $test_result -ne 0 ]; then
-    echo "❌ Tests failed. Please fix the tests before pushing."
-    exit 1
-fi
-
-echo "✅ Tests passed. Proceeding with push."
+# If we got here, all checks passed
+echo "All pre-push checks passed!"
 exit 0
