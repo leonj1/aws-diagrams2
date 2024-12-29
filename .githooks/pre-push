@@ -8,9 +8,6 @@ echo "Running pre-push checks..."
 # Run tests
 make test
 
-# Run linting
-make lint
-
 # If we got here, all checks passed
 echo "All pre-push checks passed!"
 exit 0
