@@ -31,7 +31,7 @@ def _get_cluster_color(node_type: str) -> str:
     # Handle VPC case since it's capitalized in the hierarchy
     if node_type == "VPC":
         node_type = "aws-vpc"
-    return can_be_parent.get(node_type, "#F5F5F5")  # Default to light gray
+    return clusters.get(node_type, "#F5F5F5")  # Default to light gray
 
 def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str], List[str]]:
     """Process a node in the hierarchy and return its script lines and variable declarations."""
@@ -126,7 +126,7 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     
     return lines, vars
 
-can_be_parent = {
+clusters = {
     "aws-cloud": "#F5F5F5",     # Light gray
     "region": "#F5F5F5",        # Light gray
     "aws-vpc": "#E8F4FA",       # Light blue
