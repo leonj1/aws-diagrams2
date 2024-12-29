@@ -13,7 +13,7 @@ def _get_node_class(resource_type: str) -> str:
     node_map = {
         "aws-cloud": "ManagementAndGovernance",
         "region": "General",
-        "VPC": "VPC",
+        # "VPC": "VPC",  # VPC is a pure cluster, not a node
         "aws-route-table": "RouteTable",
         "aws-route-table-association": "RouteTable",
         # "aws-subnet": "PrivateSubnet",  # Subnets are pure clusters, not nodes
@@ -90,13 +90,6 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
         lines.append(f"{indent_str}    }}")
         lines.append(f"{indent_str}):")
         
-        # Create node for VPC (special case - both cluster and node)
-        if node_type == "VPC":
-            var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
-            node_class = _get_node_class(node["type"])
-            lines.append(f'{indent_str}    {var_name} = {node_class}("{node["name"]}")')
-            vars.append(var_name)
-        
         # Process children
         if "children" in node:
             child_vars_by_type = {}
@@ -108,14 +101,11 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                     child_vars_by_type[child_type] = []
                 child_vars_by_type[child_type].extend(child_vars)
             
-            # Add connections
+            # Add connections between siblings
             for child_type, child_vars in child_vars_by_type.items():
                 if len(child_vars) > 1:
                     for i in range(len(child_vars) - 1):
                         lines.append(f"{indent_str}    {child_vars[i]} >> {child_vars[i+1]}")
-                # Only add connections from VPC node to children
-                if child_vars and node_type == "VPC":
-                    lines.append(f"{indent_str}    {var_name} >> {child_vars[0]}")
     else:
         # Create regular node
         var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
@@ -161,7 +151,7 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
         "#!/usr/bin/env python3",
         "from diagrams import Diagram, Cluster",
         "from diagrams.aws.compute import ECS, ElasticContainerServiceService, Fargate",
-        "from diagrams.aws.network import VPC, RouteTable, InternetGateway, NATGateway, Nacl",
+        "from diagrams.aws.network import RouteTable, InternetGateway, NATGateway, Nacl",  # Removed VPC since it's only a cluster
         "from diagrams.aws.security import IAMRole, IAM",
         "from diagrams.aws.general import General",
         "from diagrams.aws.management import ManagementAndGovernance",

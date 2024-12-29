@@ -42,8 +42,8 @@ def test_create_diagram_script_vpc():
     }
     
     script = create_diagram_script(json.dumps(hierarchy))
-    assert "VPC(" in script
-    assert "Cluster(" in script
+    assert "VPC(" not in script  # VPC is only a cluster, not a node
+    assert "Cluster(" in script  # VPC should be rendered as a cluster
 
 
 def test_create_diagram_script_ecs():
