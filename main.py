@@ -216,7 +216,17 @@ if __name__ == "__main__":
         print(f"Generating diagram as {args.output}.png...")
         try:
             script = create_diagram_script(hierarchy)
-            create_diagram(hierarchy, args.output)
+            # Save and execute the script
+            script_path = "output_diagram_script.py"
+            with open(script_path, "w") as f:
+                f.write(script)
+            
+            # Make script executable
+            import os
+            os.chmod(script_path, 0o755)
+            
+            # Execute script
+            os.system(f"python3 {script_path}")
         except Exception as e:
             print(f"Error generating diagram: {str(e)}", file=sys.stderr)
             sys.exit(1)
@@ -225,4 +235,3 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("Done! 🎉")
-    print(script)
