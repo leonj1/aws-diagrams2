@@ -181,40 +181,92 @@ resource "aws_ecs_service" "react_app" {
   }
 }
 '''
-    result = create_aws_hierarchy(content)
-    
-    # Get references to nested structures
-    region_children = result["aws-cloud"]["children"]["region"]["children"]
-    vpc_children = region_children["aws-vpc"]["children"]
-    subnet_children = vpc_children["aws-subnet"]["children"]
-    cluster_children = subnet_children["aws-ecs-cluster"]["children"]
-    service_children = cluster_children["aws-ecs-service"]["children"]
-    
-    # Verify VPC level resources
-    assert "aws-route-table" in vpc_children
-    assert "aws-route-table-association" in vpc_children
-    assert "aws-iam-role" in vpc_children
-    assert "aws-iam-role-policy-attachment" in vpc_children
-    assert "aws-security-group" in vpc_children
-    assert "aws-subnet" in vpc_children
-    
-    # Verify resource names
-    assert vpc_children["aws-route-table"]["name"] == "Route Table"
-    assert vpc_children["aws-route-table-association"]["name"] == "Route Table Association"
-    assert vpc_children["aws-iam-role"]["name"] == "IAM Role"
-    assert vpc_children["aws-iam-role-policy-attachment"]["name"] == "IAM Role Policy Attachment"
-    assert vpc_children["aws-security-group"]["name"] == "AWS Security Group"
-    assert vpc_children["aws-subnet"]["name"] == "subnet"
-    
-    # Verify ECS resources and names
-    assert "aws-ecs-cluster" in subnet_children
-    assert subnet_children["aws-ecs-cluster"]["name"] == "ECS Cluster"
-    
-    assert "aws-ecs-service" in cluster_children
-    assert cluster_children["aws-ecs-service"]["name"] == "ECS Service"
-    
-    assert "aws-ecs-task-definition" in service_children
-    assert service_children["aws-ecs-task-definition"]["name"] == "ECS Task Definition"
+
+    expected = '''
+{
+  "aws-cloud": {
+    "type": "aws-cloud",
+    "name": "AWS Cloud",
+    "children": {
+      "region": {
+        "type": "region",
+        "name": "AWS Region",
+        "children": {
+        	"aws-vpc": {
+        		"name": "VPC",
+        		"type": "VPC",
+        		"children": {
+        			"aws-route-table": {
+        				"name": "Route Table",
+        				"type": "aws-route-table",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-route-table-association": {
+        				"name": "Route Table Association",
+        				"type": "aws-route-table-association",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-iam-role": {
+        				"name": "IAM Role",
+        				"type": "aws-iam-role",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-iam-role-policy-attachment": {
+        				"name": "IAM Role Policy Attachment",
+        				"type": "aws-iam-role-policy-attachment",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-security-group": {
+        				"name": "AWS Security Group",
+        				"type": "aws-security-group",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-subnet": {
+        				"name": "subnet",
+        				"type": "Subnet",
+        				"children": {
+		        			"aws-ecs-cluster": {
+		        				"name": "ECS Cluster",
+		        				"type": "aws-ecs-cluster",
+		        				"children": {
+				        			"aws-ecs-service": {
+				        				"name": "ECS Service",
+				        				"type": "aws-ecs-service",
+				        				"children": {
+						        			"aws-ecs-task-definition": {
+						        				"name": "ECS Task Definition",
+						        				"type": "aws-ecs-task-definition",
+						        				"children": {
+						        				
+						        				}
+						        			}
+				        				}
+				        			}
+		        				}
+		        			}
+        				}
+        			}
+        		}
+        	}
+        }
+      }
+    }
+  }
+}
+'''
+
+    actual = create_aws_hierarchy(content)    
+    assert actual == json.loads(expected)
 
 
 def test_format_hierarchy():
