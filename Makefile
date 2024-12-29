@@ -4,20 +4,20 @@
 
 # Default Python test command
 PYTEST = python -m pytest
-# Test files pattern
-TEST_FILES = test_*.py
+# Test directory
+TEST_DIR = tests/
 
 # Default target
-test:
-	$(PYTEST) $(TEST_FILES)
+test: test-coverage
+	$(PYTEST) $(TEST_DIR)
 
 # Run tests with verbose output
 test-verbose:
-	$(PYTEST) -v $(TEST_FILES)
+	$(PYTEST) -v $(TEST_DIR)
 
 # Run tests with coverage report
 test-coverage:
-	$(PYTEST) --cov=. $(TEST_FILES) --cov-report term-missing
+	$(PYTEST) --cov=. $(TEST_DIR) --cov-report term-missing
 
 # Clean up Python cache files
 clean:
