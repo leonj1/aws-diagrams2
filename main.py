@@ -26,6 +26,13 @@ def _get_node_class(resource_type: str) -> str:
     }
     return node_map.get(resource_type, "General")
 
+def _get_cluster_color(node_type: str) -> str:
+    """Get the appropriate background color for a cluster type."""
+    # Handle VPC case since it's capitalized in the hierarchy
+    if node_type == "VPC":
+        node_type = "aws-vpc"
+    return can_be_parent.get(node_type, "#F5F5F5")  # Default to light gray
+
 def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str], List[str]]:
     """Process a node in the hierarchy and return its script lines and variable declarations."""
     lines = []
@@ -61,10 +68,12 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     if is_cluster:
         lines.append(f"{indent_str}with Cluster(")
         lines.append(f'{indent_str}    "{node["name"]} ({node["type"]})",')
+        # Get cluster color based on node type
+        cluster_color = _get_cluster_color(node["type"])
         lines.append(f"{indent_str}    graph_attr={{")
         lines.append(f'{indent_str}        "style": "rounded",')
-        lines.append(f'{indent_str}        "bgcolor": "lightgrey",')
-        lines.append(f'{indent_str}        "pencolor": "#336699",')
+        lines.append(f'{indent_str}        "bgcolor": "{cluster_color}",')
+        lines.append(f'{indent_str}        "pencolor": "#666666",')
         lines.append(f'{indent_str}        "penwidth": "2.0",')
         lines.append(f'{indent_str}        "fontsize": "12",')
         lines.append(f'{indent_str}        "margin": "15"')
@@ -113,14 +122,14 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     
     return lines, vars
 
-can_be_parent = [
-    "aws-cloud",
-    "region",
-    "aws-vpc",
-    "aws-subnet",
-    "aws-ecs-cluster",
-    "aws-ecs-service",
-]
+can_be_parent = {
+    "aws-cloud": "#F5F5F5",     # Light gray
+    "region": "#F5F5F5",        # Light gray
+    "aws-vpc": "#E8F4FA",       # Light blue
+    "aws-subnet": "#E6FFE6",    # Light green
+    "aws-ecs-cluster": "#FFF0E6", # Light orange
+    "aws-ecs-service": "#F5E6FF"  # Light purple
+}
 
 def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_architecture") -> str:
     """
