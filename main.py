@@ -197,6 +197,8 @@ if __name__ == "__main__":
         print(f"Reading Terraform files from {args.folder_path}...")
         try:
             terraform_contents = get_terraform_contents(args.folder_path)
+            # print the number of lines in terraform_contents
+            print(f"Number of lines in terraform_contents: {len(terraform_contents.splitlines())}")
             # save terraform_contents to file
             with open("terraform_contents.txt", "w") as f:
                 f.write(terraform_contents)
