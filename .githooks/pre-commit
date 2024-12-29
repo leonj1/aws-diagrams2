@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Store the current directory
+current_dir=$(pwd)
+
+echo "Running tests before commit..."
+
+# Run make test
+make test
+
+# Get the exit code of make test
+test_result=$?
+
+# If tests failed, prevent the commit
+if [ $test_result -ne 0 ]; then
+    echo "❌ Tests failed. Please fix the tests before committing."
+    exit 1
+fi
+
+echo "✅ Tests passed. Proceeding with commit."
+exit 0

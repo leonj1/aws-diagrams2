@@ -106,6 +106,10 @@ lib64/
 
 # Documentation
 docs/_build/
+
+# Git hooks
+.git/hooks/*
+!.githooks/
 tmp
 *.png
 
