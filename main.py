@@ -60,6 +60,9 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     elif node_type == "VPC":
         # VPC is always a cluster
         is_cluster = True
+    elif node_type == "aws-ecs-service":
+        # ECS Service is always a cluster to contain task definitions
+        is_cluster = True
     else:
         # Convert type to AWS resource format (e.g., "aws-ecs-cluster" -> "aws_ecs_cluster")
         resource_type = f"aws_{node_type.lower().replace('-', '_')}"
@@ -80,13 +83,14 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
         lines.append(f"{indent_str}    }}")
         lines.append(f"{indent_str}):")
         
-        # Create node
-        var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
-        node_class = _get_node_class(node["type"])
-        lines.append(f'{indent_str}    {var_name} = {node_class}("{node["name"]}")')
-        vars.append(var_name)
+        # Create node (except for ECS services which are pure clusters)
+        if node["type"] != "aws-ecs-service":
+            var_name = f"{node['type'].lower().replace('-', '_')}_{len(vars)}"
+            node_class = _get_node_class(node["type"])
+            lines.append(f'{indent_str}    {var_name} = {node_class}("{node["name"]}")')
+            vars.append(var_name)
         
-        # Process children
+        # Process children (with special handling for ECS service)
         if "children" in node:
             child_vars_by_type = {}
             for child in node["children"].values():
@@ -102,7 +106,7 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
                 if len(child_vars) > 1:
                     for i in range(len(child_vars) - 1):
                         lines.append(f"{indent_str}    {child_vars[i]} >> {child_vars[i+1]}")
-                if child_vars:
+                if child_vars and node["type"] != "aws-ecs-service":
                     lines.append(f"{indent_str}    {var_name} >> {child_vars[0]}")
     else:
         # Create regular node

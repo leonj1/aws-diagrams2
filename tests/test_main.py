@@ -82,7 +82,7 @@ def test_create_diagram_script_ecs():
     
     script = create_diagram_script(json.dumps(hierarchy))
     assert "ECS(" in script
-    assert "ElasticContainerServiceService(" in script
+    assert "ElasticContainerServiceService(" not in script  # ECS services are clusters only
     assert ">>" in script  # Check for connections
 
 
