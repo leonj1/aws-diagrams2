@@ -102,7 +102,7 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1) -> Tuple[List[str]
     
     return lines, vars
 
-def create_diagram_script(hierarchy_json: str) -> str:
+def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_architecture") -> str:
     """
     Create a Python script that uses mingrammer diagrams to render AWS architecture.
     
@@ -128,6 +128,7 @@ def create_diagram_script(hierarchy_json: str) -> str:
         "# Create diagram",
         'with Diagram(',
         '    "AWS Architecture",',
+        f'    filename="{output_filename}",',
         '    show=False,',
         '    direction="TB",',
         "    graph_attr={",
@@ -223,7 +224,7 @@ if __name__ == "__main__":
         # Generate diagram
         print(f"Generating diagram as {args.output}.png...")
         try:
-            script = create_diagram_script(json.dumps(hierarchy))
+            script = create_diagram_script(json.dumps(hierarchy), args.output)
             # Save and execute the script
             script_path = "output_diagram_script.py"
             with open(script_path, "w") as f:
