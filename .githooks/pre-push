@@ -3,7 +3,7 @@
 # Store the current directory
 current_dir=$(pwd)
 
-echo "Running tests before commit..."
+echo "Running tests before push..."
 
 # Run make test
 make test
@@ -11,11 +11,11 @@ make test
 # Get the exit code of make test
 test_result=$?
 
-# If tests failed, prevent the commit
+# If tests failed, prevent the push
 if [ $test_result -ne 0 ]; then
-    echo "❌ Tests failed. Please fix the tests before committing."
+    echo "❌ Tests failed. Please fix the tests before pushing."
     exit 1
 fi
 
-echo "✅ Tests passed. Proceeding with commit."
+echo "✅ Tests passed. Proceeding with push."
 exit 0
