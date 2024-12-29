@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import sys
 import argparse
 from terraform_reader import get_terraform_contents
@@ -36,6 +37,9 @@ def main():
         print(f"Reading Terraform files from {args.folder_path}...")
         try:
             terraform_contents = get_terraform_contents(args.folder_path)
+            # save terraform_contents to file
+            with open("terraform_contents.txt", "w") as f:
+                f.write(terraform_contents)
         except FileNotFoundError as e:
             print(f"Error: {str(e)}", file=sys.stderr)
             sys.exit(1)
@@ -47,6 +51,9 @@ def main():
         print("Creating AWS resource hierarchy...")
         try:
             hierarchy = create_aws_hierarchy(terraform_contents)
+            # save hierarchy to file
+            with open("hierarchy.json", "w") as f:
+                json.dump(hierarchy, f)
         except Exception as e:
             print(f"Error parsing terraform contents: {str(e)}", file=sys.stderr)
             sys.exit(1)

@@ -1,0 +1,1 @@
+{"aws-cloud": {"type": "aws-cloud", "name": "AWS Cloud", "children": {"region": {"type": "region", "name": "AWS Region", "children": {}}}}}
