@@ -107,4 +107,5 @@ lib64/
 # Documentation
 docs/_build/
 tmp
+*.png
 
