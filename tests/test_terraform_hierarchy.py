@@ -265,7 +265,7 @@ resource "aws_ecs_service" "react_app" {
 }
 '''
 
-    actual = create_aws_hierarchy(content)    
+    actual = create_aws_hierarchy(content)
     assert actual == json.loads(expected)
 
 
