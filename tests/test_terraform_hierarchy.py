@@ -268,6 +268,98 @@ resource "aws_ecs_service" "react_app" {
     actual = create_aws_hierarchy(content)
     assert actual == json.loads(expected)
 
+def test_full_ecs_structure2():
+    """Test hierarchy creation with a full ECS infrastructure."""
+    # read file contents from terraform_contents.txt and set content variable
+    with open("terraform_contents.txt", "r") as f:
+        content = f.read()
+
+    expected = '''
+{
+  "aws-cloud": {
+    "type": "aws-cloud",
+    "name": "AWS Cloud",
+    "children": {
+      "region": {
+        "type": "region",
+        "name": "AWS Region",
+        "children": {
+        	"aws-vpc": {
+        		"name": "VPC",
+        		"type": "VPC",
+        		"children": {
+        			"aws-route-table": {
+        				"name": "Route Table",
+        				"type": "aws-route-table",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-route-table-association": {
+        				"name": "Route Table Association",
+        				"type": "aws-route-table-association",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-iam-role": {
+        				"name": "IAM Role",
+        				"type": "aws-iam-role",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-iam-role-policy-attachment": {
+        				"name": "IAM Role Policy Attachment",
+        				"type": "aws-iam-role-policy-attachment",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-security-group": {
+        				"name": "AWS Security Group",
+        				"type": "aws-security-group",
+        				"children": {
+        				
+        				}
+        			},
+        			"aws-subnet": {
+        				"name": "subnet",
+        				"type": "Subnet",
+        				"children": {
+		        			"aws-ecs-cluster": {
+		        				"name": "ECS Cluster",
+		        				"type": "aws-ecs-cluster",
+		        				"children": {
+				        			"aws-ecs-service": {
+				        				"name": "ECS Service",
+				        				"type": "aws-ecs-service",
+				        				"children": {
+						        			"aws-ecs-task-definition": {
+						        				"name": "ECS Task Definition",
+						        				"type": "aws-ecs-task-definition",
+						        				"children": {
+						        				
+						        				}
+						        			}
+				        				}
+				        			}
+		        				}
+		        			}
+        				}
+        			}
+        		}
+        	}
+        }
+      }
+    }
+  }
+}
+'''
+
+    actual = create_aws_hierarchy(content)
+    assert actual == json.loads(expected)
+
 
 def test_format_hierarchy():
     """Test the format_hierarchy function."""

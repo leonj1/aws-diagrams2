@@ -53,14 +53,18 @@ def parse_terraform_files(file_contents: str) -> List[ResourceNode]:
         List[ResourceNode]: List of ResourceNode objects representing the resources
     """
     # Split content into individual files
-    file_pattern = r'={16,}\nFile:\s+([^\n]+)\n={16,}\n(.*?)(?=\n={16,}|\Z)'
+    # Match both formats:
+    # 1. ================\nFile: main.tf\n================\n
+    # 2. # File: tmp/terraform-demo1/ecs.tf
+    file_pattern = r'(?:={16,}\nFile:\s+([^\n]+)\n={16,}|#\s*File:\s+([^\n]+))\n(.*?)(?=\n(?:={16,}|\#\s*File:)|\Z)'
     
     all_resources = []
     
     # Process each file's content
     for match in re.finditer(file_pattern, file_contents, re.DOTALL):
-        file_name = match.group(1)
-        file_content = match.group(2)
+        # Get filename from whichever group matched
+        file_name = match.group(1) if match.group(1) else match.group(2)
+        file_content = match.group(3)
         
         # Parse resources from this file
         resources = parse_terraform_resources(file_content)
