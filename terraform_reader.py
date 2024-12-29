@@ -13,7 +13,14 @@ def get_terraform_contents(folder_path: str) -> str:
         
     Returns:
         str: Concatenated contents of all .tf and .tfvars files
+        
+    Raises:
+        FileNotFoundError: If folder_path doesn't exist
+        ValueError: If no terraform files are found in the folder
     """
+    # Check if folder exists
+    if not os.path.exists(folder_path):
+        raise FileNotFoundError(f"Folder not found: {folder_path}")
     def find_terraform_files(directory: str) -> List[str]:
         """
         Helper function to recursively find all .tf and .tfvars files
@@ -49,6 +56,10 @@ def get_terraform_contents(folder_path: str) -> str:
                 combined_contents.append(f.read())
         except Exception as e:
             combined_contents.append(f"\n# Error reading {file_path}: {str(e)}\n")
+    
+    # Check if any terraform files were found
+    if not terraform_files:
+        raise ValueError(f"No terraform files (.tf, .tfvars) found in {folder_path}")
     
     # Join all contents with newlines
     return "\n".join(combined_contents)
