@@ -155,7 +155,12 @@ def create_diagram_script(hierarchy_json: str) -> str:
     
     # Process hierarchy
     node_lines, _ = _process_node(hierarchy)
-    script_lines.extend(node_lines)
+    
+    # Add nodes or pass statement
+    if node_lines:
+        script_lines.extend(node_lines)
+    else:
+        script_lines.append("    pass  # No nodes to render")
     
     # Join all lines
     script = "\n".join(script_lines)
@@ -215,7 +220,7 @@ if __name__ == "__main__":
         # Generate diagram
         print(f"Generating diagram as {args.output}.png...")
         try:
-            script = create_diagram_script(hierarchy)
+            script = create_diagram_script(json.dumps(hierarchy))
             # Save and execute the script
             script_path = "output_diagram_script.py"
             with open(script_path, "w") as f:
