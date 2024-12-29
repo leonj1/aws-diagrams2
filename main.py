@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 import argparse
 from terraform_reader import get_terraform_contents
 from terraform_hierarchy import create_aws_hierarchy
@@ -210,8 +211,8 @@ if __name__ == "__main__":
         print("Creating AWS resource hierarchy...")
         try:
             hierarchy = create_aws_hierarchy(terraform_contents)
-            # save hierarchy to file
-            with open("hierarchy.json", "w") as f:
+            # save hierarchy to file. Since its json also prety print it
+            with open("heirarchy.json", "w") as f:
                 json.dump(hierarchy, f)
         except Exception as e:
             print(f"Error parsing terraform contents: {str(e)}", file=sys.stderr)
@@ -227,7 +228,6 @@ if __name__ == "__main__":
                 f.write(script)
             
             # Make script executable
-            import os
             os.chmod(script_path, 0o755)
             
             # Execute script

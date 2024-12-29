@@ -86,3 +86,6 @@ output_diagram_script.py
 
 aws_architecture.png
 
+*.png
+hierarchy.json
+
