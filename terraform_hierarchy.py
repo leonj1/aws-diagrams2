@@ -29,8 +29,16 @@ def create_aws_hierarchy(terraform_content: str) -> Dict[str, Any]:
     cloud_children = hierarchy["aws-cloud"]["children"]
     region_children = {}
     
-    # Sort providers by region to ensure consistent ordering
-    for provider_alias, region in sorted(providers.items(), key=lambda x: x[1]):
+    # Sort providers by region to ensure consistent vertical ordering
+    def region_sort_key(item):
+        alias, region = item
+        # Ensure us-east-1 comes first
+        if region == "us-east-1":
+            return "0"
+        # Sort other regions by their full name to maintain consistent order
+        return region
+
+    for provider_alias, region in sorted(providers.items(), key=region_sort_key):
         region_key = f"region-{region}"
         if region_key not in cloud_children:
             cloud_children[region_key] = {

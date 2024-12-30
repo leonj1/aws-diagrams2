@@ -86,7 +86,12 @@ def _process_node(node_data: Dict[str, Any], indent: int = 1, region: str = None
         lines.append(f'{indent_str}        "pencolor": "#666666",')
         lines.append(f'{indent_str}        "penwidth": "2.0",')
         lines.append(f'{indent_str}        "fontsize": "14",')
-        lines.append(f'{indent_str}        "margin": "20"')
+        lines.append(f'{indent_str}        "margin": "20",')
+        lines.append(f'{indent_str}        "rank": "source",')
+        lines.append(f'{indent_str}        "constraint": "true",')
+        lines.append(f'{indent_str}        "weight": "100",')
+        lines.append(f'{indent_str}        "minlen": "4",')
+        lines.append(f'{indent_str}        "group": "regions"')
         lines.append(f"{indent_str}    }}")
         lines.append(f"{indent_str}):")
         lines.append(f"{indent_str}    _dummy = General('dummy')  # Region: {region_name}")
@@ -180,23 +185,37 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
     # Generate script lines
     script_lines = [
         "#!/usr/bin/env python3",
-        "from diagrams import Diagram, Cluster",
+        "from diagrams import Diagram, Cluster, Edge",
         "from diagrams.aws.compute import ECS, ElasticContainerServiceService, Fargate",
-        "from diagrams.aws.network import RouteTable, InternetGateway, NATGateway, Nacl",  # Removed VPC since it's only a cluster
+        "from diagrams.aws.network import RouteTable, InternetGateway, NATGateway, Nacl",
         "from diagrams.aws.security import IAMRole, IAM",
         "from diagrams.aws.general import General",
         "from diagrams.aws.management import ManagementAndGovernance",
         "",
         "# Create diagram",
         "graph_attr = {",
-        '    "splines": "ortho",     # Orthogonal connections',
-        '    "nodesep": "2.0",       # Node separation',
-        '    "ranksep": "3.0",       # Rank separation',
-        '    "pad": "3.0",           # Padding',
-        '    "concentrate": "true",   # Merge parallel edges',
-        '    "compound": "true",      # Enable cluster connections',
-        '    "rankdir": "TB",        # Top to bottom direction',
-        '    "ordering": "out"       # Maintain order of connections',
+        '    "splines": "ortho",        # Orthogonal connections',
+        '    "nodesep": "2.0",          # Node separation',
+        '    "ranksep": "40.0",         # Large rank separation for vertical layout',
+        '    "pad": "3.0",              # Padding',
+        '    "concentrate": "true",      # Merge parallel edges',
+        '    "compound": "true",         # Enable cluster connections',
+        '    "rankdir": "TB",           # Top to bottom direction',
+        '    "ordering": "out",         # Maintain order of connections',
+        '    "newrank": "true",         # Enable new ranking mode for better cluster layout',
+        '    "clusterrank": "global",   # Force global ranking',
+        '    "pack": "false",           # Disable automatic packing',
+        '    "overlap": "false",        # Prevent node overlap',
+        '    "outputorder": "nodesfirst",# Process nodes before edges',
+        '    "sep": "+90",              # Increase separation between all elements',
+        '    "esep": "+85",             # Increase edge separation',
+        '    "margin": "7.0",           # Add margin around the graph',
+        '    "constraint": "true",      # Enable constraint-based layout',
+        '    "forcelabels": "true",    # Force label placement',
+        '    "remincross": "true",     # Minimize edge crossings',
+        '    "layout": "dot",         # Use dot layout engine',
+        '    "mindist": "5.0",        # Minimum distance between nodes',
+        '    "mode": "ipsep"         # Use constrained layout mode',
         "}",
         "",
         "node_attr = {",
@@ -223,6 +242,9 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
     # Process hierarchy and prepare node lines
     node_lines, _ = _process_node(hierarchy)
     
+    # No need for invisible edges with updated graph attributes
+    region_edges = []
+    
     # Add diagram creation
     script_lines.append("def create_diagram():")
     script_lines.append('    with Diagram(')
@@ -239,6 +261,7 @@ def create_diagram_script(hierarchy_json: str, output_filename: str = "aws_archi
         # Adjust indentation for all node lines
         node_lines = ['        ' + line for line in node_lines]
         script_lines.extend(node_lines)
+        script_lines.extend(region_edges)
     else:
         script_lines.append('        pass')
     script_lines.append("")

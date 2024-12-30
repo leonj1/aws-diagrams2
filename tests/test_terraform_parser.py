@@ -1,5 +1,5 @@
 import pytest
-from terraform_parser import parse_terraform_resources, parse_terraform_files
+from terraform_parser import parse_terraform_resources_with_providers, parse_terraform_files
 from resource_node import ResourceNode
 
 
@@ -99,7 +99,8 @@ from resource_node import ResourceNode
 ])
 def test_parse_terraform_resources(test_id, content, expected):
     """Table-driven tests for parse_terraform_resources function."""
-    result = parse_terraform_resources(content)
+    providers = {"default": "us-east-1"}
+    _, result = parse_terraform_resources_with_providers(content, providers)
     
     assert len(result) == len(expected), \
         f"Test {test_id}: Expected {len(expected)} resources, got {len(result)}"
@@ -225,7 +226,7 @@ resource "aws_security_group" "web" {
 ])
 def test_parse_terraform_files(test_id, content, expected):
     """Table-driven tests for parse_terraform_files function."""
-    result = parse_terraform_files(content)
+    providers, result = parse_terraform_files(content)
     
     assert len(result) == len(expected), \
         f"Test {test_id}: Expected {len(expected)} resources, got {len(result)}"
@@ -249,7 +250,7 @@ resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 '''
-    result = parse_terraform_files(content)
+    providers, result = parse_terraform_files(content)
     assert len(result) == 0, "Expected no resources from malformed content"
 
 
@@ -281,7 +282,8 @@ def test_nested_blocks():
       }
     }
     '''
-    result = parse_terraform_resources(content)
+    providers = {"default": "us-east-1"}
+    _, result = parse_terraform_resources_with_providers(content, providers)
     assert len(result) == 1
     assert result[0].name == "complex"
     assert result[0].identifier == "aws_security_group.complex"

@@ -84,6 +84,7 @@ resource "aws_vpc" "east2" {
     assert "aws-vpc" in east2_children
     assert east2_children["aws-vpc"]["name"] == "VPC (us-east-2)"
 
+
 def test_full_ecs_structure():
     """Test hierarchy creation with a full ECS infrastructure."""
     content = '''
@@ -239,91 +240,78 @@ resource "aws_ecs_service" "react_app" {
 }
 '''
 
-    expected = '''
-{
-  "aws-cloud": {
-    "type": "aws-cloud",
-    "name": "AWS Cloud",
-    "children": {
-      "region-us-east-1": {
-        "type": "region",
-        "name": "AWS Region (us-east-1)",
-        "children": {
-        	"aws-vpc": {
-        		"name": "VPC (us-east-1)",
-        		"type": "VPC",
-        		"children": {
-        			"aws-route-table": {
-        				"name": "Route Table (us-east-1)",
-        				"type": "aws-route-table",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-route-table-association": {
-        				"name": "Route Table Association (us-east-1)",
-        				"type": "aws-route-table-association",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-iam-role": {
-        				"name": "IAM Role (us-east-1)",
-        				"type": "aws-iam-role",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-iam-role-policy-attachment": {
-        				"name": "IAM Role Policy Attachment (us-east-1)",
-        				"type": "aws-iam-role-policy-attachment",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-security-group": {
-        				"name": "AWS Security Group (us-east-1)",
-        				"type": "aws-security-group",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-subnet": {
-        				"name": "Subnet (us-east-1)",
-        				"type": "Subnet",
-        				"children": {
-		        			"aws-ecs-cluster": {
-		        				"name": "ECS Cluster (us-east-1)",
-		        				"type": "aws-ecs-cluster",
-		        				"children": {
-				        			"aws-ecs-service": {
-				        				"name": "ECS Service (us-east-1)",
-				        				"type": "aws-ecs-service",
-				        				"children": {
-						        			"aws-ecs-task-definition": {
-						        				"name": "ECS Task Definition (us-east-1)",
-						        				"type": "aws-ecs-task-definition",
-						        				"children": {
-						        				
-						        				}
-						        			}
-				        				}
-				        			}
-		        				}
-		        			}
-        				}
-        			}
-        		}
-        	}
+    expected = {
+        "aws-cloud": {
+            "type": "aws-cloud",
+            "name": "AWS Cloud",
+            "children": {
+                "region-us-east-1": {
+                    "type": "region",
+                    "name": "AWS Region (us-east-1)",
+                    "children": {
+                        "aws-vpc": {
+                            "name": "VPC (us-east-1)",
+                            "type": "VPC",
+                            "children": {
+                                "aws-route-table": {
+                                    "name": "Route Table (us-east-1)",
+                                    "type": "aws-route-table",
+                                    "children": {}
+                                },
+                                "aws-route-table-association": {
+                                    "name": "Route Table Association (us-east-1)",
+                                    "type": "aws-route-table-association",
+                                    "children": {}
+                                },
+                                "aws-iam-role": {
+                                    "name": "IAM Role (us-east-1)",
+                                    "type": "aws-iam-role",
+                                    "children": {}
+                                },
+                                "aws-iam-role-policy-attachment": {
+                                    "name": "IAM Role Policy Attachment (us-east-1)",
+                                    "type": "aws-iam-role-policy-attachment",
+                                    "children": {}
+                                },
+                                "aws-security-group": {
+                                    "name": "AWS Security Group (us-east-1)",
+                                    "type": "aws-security-group",
+                                    "children": {}
+                                },
+                                "aws-subnet": {
+                                    "name": "Subnet (us-east-1)",
+                                    "type": "Subnet",
+                                    "children": {
+                                        "aws-ecs-cluster": {
+                                            "name": "ECS Cluster (us-east-1)",
+                                            "type": "aws-ecs-cluster",
+                                            "children": {
+                                                "aws-ecs-service": {
+                                                    "name": "ECS Service (us-east-1)",
+                                                    "type": "aws-ecs-service",
+                                                    "children": {
+                                                        "aws-ecs-task-definition": {
+                                                            "name": "ECS Task Definition (us-east-1)",
+                                                            "type": "aws-ecs-task-definition",
+                                                            "children": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-      }
     }
-  }
-}
-'''
 
     actual = create_aws_hierarchy(content)
-    assert actual == json.loads(expected)
+    assert actual == expected
+
 
 def test_full_ecs_structure2():
     """Test hierarchy creation with a full ECS infrastructure."""
@@ -331,91 +319,127 @@ def test_full_ecs_structure2():
     with open("terraform_contents.txt", "r") as f:
         content = f.read()
 
-    expected = '''
-{
-  "aws-cloud": {
-    "type": "aws-cloud",
-    "name": "AWS Cloud",
-    "children": {
-      "region-us-east-1": {
-        "type": "region",
-        "name": "AWS Region (us-east-1)",
-        "children": {
-        	"aws-vpc": {
-        		"name": "VPC (us-east-1)",
-        		"type": "VPC",
-        		"children": {
-        			"aws-route-table": {
-        				"name": "Route Table (us-east-1)",
-        				"type": "aws-route-table",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-route-table-association": {
-        				"name": "Route Table Association (us-east-1)",
-        				"type": "aws-route-table-association",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-iam-role": {
-        				"name": "IAM Role (us-east-1)",
-        				"type": "aws-iam-role",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-iam-role-policy-attachment": {
-        				"name": "IAM Role Policy Attachment (us-east-1)",
-        				"type": "aws-iam-role-policy-attachment",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-security-group": {
-        				"name": "AWS Security Group (us-east-1)",
-        				"type": "aws-security-group",
-        				"children": {
-        				
-        				}
-        			},
-        			"aws-subnet": {
-        				"name": "Subnet (us-east-1)",
-        				"type": "Subnet",
-        				"children": {
-		        			"aws-ecs-cluster": {
-		        				"name": "ECS Cluster (us-east-1)",
-		        				"type": "aws-ecs-cluster",
-		        				"children": {
-				        			"aws-ecs-service": {
-				        				"name": "ECS Service (us-east-1)",
-				        				"type": "aws-ecs-service",
-				        				"children": {
-						        			"aws-ecs-task-definition": {
-						        				"name": "ECS Task Definition (us-east-1)",
-						        				"type": "aws-ecs-task-definition",
-						        				"children": {
-						        				
-						        				}
-						        			}
-				        				}
-				        			}
-		        				}
-		        			}
-        				}
-        			}
-        		}
-        	}
+    expected = {
+        "aws-cloud": {
+            "type": "aws-cloud",
+            "name": "AWS Cloud",
+            "children": {
+                "region-us-east-1": {
+                    "type": "region",
+                    "name": "AWS Region (us-east-1)",
+                    "children": {
+                        "aws-vpc": {
+                            "name": "VPC (us-east-1)",
+                            "type": "VPC",
+                            "children": {
+                                "aws-route-table": {
+                                    "name": "Route Table (us-east-1)",
+                                    "type": "aws-route-table",
+                                    "children": {}
+                                },
+                                "aws-route-table-association": {
+                                    "name": "Route Table Association (us-east-1)",
+                                    "type": "aws-route-table-association",
+                                    "children": {}
+                                },
+                                "aws-iam-role": {
+                                    "name": "IAM Role (us-east-1)",
+                                    "type": "aws-iam-role",
+                                    "children": {}
+                                },
+                                "aws-iam-role-policy-attachment": {
+                                    "name": "IAM Role Policy Attachment (us-east-1)",
+                                    "type": "aws-iam-role-policy-attachment",
+                                    "children": {}
+                                },
+                                "aws-security-group": {
+                                    "name": "AWS Security Group (us-east-1)",
+                                    "type": "aws-security-group",
+                                    "children": {}
+                                },
+                                "aws-subnet": {
+                                    "name": "Subnet (us-east-1)",
+                                    "type": "Subnet",
+                                    "children": {
+                                        "aws-ecs-cluster": {
+                                            "name": "ECS Cluster (us-east-1)",
+                                            "type": "aws-ecs-cluster",
+                                            "children": {
+                                                "aws-ecs-service": {
+                                                    "name": "ECS Service (us-east-1)",
+                                                    "type": "aws-ecs-service",
+                                                    "children": {
+                                                        "aws-ecs-task-definition": {
+                                                            "name": "ECS Task Definition (us-east-1)",
+                                                            "type": "aws-ecs-task-definition",
+                                                            "children": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "region-us-east-2": {
+                    "type": "region",
+                    "name": "AWS Region (us-east-2)",
+                    "children": {
+                        "aws-vpc": {
+                            "name": "VPC (us-east-2)",
+                            "type": "VPC",
+                            "children": {
+                                "aws-route-table": {
+                                    "name": "Route Table (us-east-2)",
+                                    "type": "aws-route-table",
+                                    "children": {}
+                                },
+                                "aws-route-table-association": {
+                                    "name": "Route Table Association (us-east-2)",
+                                    "type": "aws-route-table-association",
+                                    "children": {}
+                                },
+                                "aws-security-group": {
+                                    "name": "AWS Security Group (us-east-2)",
+                                    "type": "aws-security-group",
+                                    "children": {}
+                                },
+                                "aws-subnet": {
+                                    "name": "Subnet (us-east-2)",
+                                    "type": "Subnet",
+                                    "children": {
+                                        "aws-ecs-cluster": {
+                                            "name": "ECS Cluster (us-east-2)",
+                                            "type": "aws-ecs-cluster",
+                                            "children": {
+                                                "aws-ecs-service": {
+                                                    "name": "ECS Service (us-east-2)",
+                                                    "type": "aws-ecs-service",
+                                                    "children": {
+                                                        "aws-ecs-task-definition": {
+                                                            "name": "ECS Task Definition (us-east-2)",
+                                                            "type": "aws-ecs-task-definition",
+                                                            "children": {}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-      }
     }
-  }
-}
-'''
 
     actual = create_aws_hierarchy(content)
-    assert actual == json.loads(expected)
+    assert actual == expected
 
 
 def test_format_hierarchy():
