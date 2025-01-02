@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# Create symlink from .git/hooks/pre-commit to .githooks/pre-commit
 echo "Setting up Git hooks..."
 
-# Remove existing pre-commit hook if it exists
-if [ -f .git/hooks/pre-commit ]; then
-    rm .git/hooks/pre-commit
+# Remove existing pre-push hook if it exists
+if [ -f .git/hooks/pre-push ]; then
+    rm .git/hooks/pre-push
 fi
 
-# Create symlink
-ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
+# Copy pre-push hook
+cp .githooks/pre-push .git/hooks/pre-push
 
 # Make sure the hook is executable
-chmod +x .githooks/pre-commit
+chmod +x .git/hooks/pre-push
 
 echo "✅ Git hooks setup complete!"

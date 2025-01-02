@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+echo "Running pre-push checks..."
+
+# Run tests
+make test
+
+# If we got here, all checks passed
+echo "All pre-push checks passed!"
+exit 0

@@ -46,10 +46,6 @@ venv.bak/
 *.iws
 .idea_modules/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb
-
 # Testing
 htmlcov/
 .tox/
@@ -79,37 +75,18 @@ log/
 ehthumbs.db
 Thumbs.db
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Distribution / packaging
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info
-dist/
-build/
-eggs/
-parts/
-bin/
-var/
-sdist/
-develop-eggs/
-.installed.cfg
-lib/
-lib64/
-
-# Documentation
-docs/_build/
-
 # Git hooks
 .git/hooks/*
 !.githooks/
 tmp
+
+terraform_contents.txt
+
+output_diagram_script.py
+
+aws_architecture.png
+
 *.png
+hierarchy.json
+heirarchy.json
 

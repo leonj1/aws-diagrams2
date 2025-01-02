@@ -1,80 +1,102 @@
 import pytest
-import sys
-import os
-import tempfile
-from main import main
+import json
+from main import create_diagram_script
 
 
-def test_main_with_empty_folder(capsys):
-    """Test main function with an empty folder."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Run with empty folder
-        with pytest.raises(SystemExit) as exc_info:
-            sys.argv = ["main.py", temp_dir]
-            main()
-        
-        assert exc_info.value.code == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-
-
-def test_main_with_terraform_files(capsys):
-    """Test main function with valid terraform files."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test terraform file
-        with open(os.path.join(temp_dir, "main.tf"), "w") as f:
-            f.write('''
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-}
-''')
-        
-        # Run with test folder
-        sys.argv = ["main.py", temp_dir]
-        main()
-        
-        captured = capsys.readouterr()
-        assert "Done!" in captured.out
-        assert os.path.exists("aws_architecture.png")
-
-
-def test_main_with_custom_output(capsys):
-    """Test main function with custom output filename."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test terraform file
-        with open(os.path.join(temp_dir, "main.tf"), "w") as f:
-            f.write('''
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-}
-''')
-        
-        # Run with custom output filename
-        output_name = "test_diagram"
-        sys.argv = ["main.py", temp_dir, "-o", output_name]
-        main()
-        
-        captured = capsys.readouterr()
-        assert "Done!" in captured.out
-        assert os.path.exists(f"{output_name}.png")
-
-
-def test_main_with_invalid_folder(capsys):
-    """Test main function with non-existent folder."""
-    with pytest.raises(SystemExit) as exc_info:
-        sys.argv = ["main.py", "/nonexistent/folder"]
-        main()
+def test_create_diagram_script_empty_hierarchy():
+    """Test script generation with empty hierarchy."""
+    hierarchy = {
+            "aws-cloud": {
+                "type": "aws-cloud",
+                "name": "AWS Cloud",
+                "children": {}
+            }
+    }
     
-    assert exc_info.value.code == 1
-    captured = capsys.readouterr()
-    assert "Error" in captured.err
+    script = create_diagram_script(json.dumps(hierarchy))
+    assert "#!/usr/bin/env python3" in script
+    assert "from diagrams import Diagram" in script
+    assert "AWS Architecture" in script
+
+
+def test_create_diagram_script_vpc():
+    """Test script generation with VPC."""
+    hierarchy = {
+        "aws-cloud": {
+            "type": "aws-cloud",
+            "name": "AWS Cloud",
+            "children": {
+                "region": {
+                    "type": "region",
+                    "name": "AWS Region",
+                    "children": {
+                        "aws-vpc": {
+                            "name": "VPC",
+                            "type": "VPC",
+                            "children": {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    script = create_diagram_script(json.dumps(hierarchy))
+    assert "VPC(" not in script  # VPC is only a cluster, not a node
+    assert "Cluster(" in script  # VPC should be rendered as a cluster
+
+
+def test_create_diagram_script_ecs():
+    """Test script generation with ECS resources."""
+    hierarchy = {
+        "aws-cloud": {
+            "type": "aws-cloud",
+            "name": "AWS Cloud",
+            "children": {
+                "region": {
+                    "type": "region",
+                    "name": "AWS Region",
+                    "children": {
+                        "aws-vpc": {
+                            "name": "VPC",
+                            "type": "VPC",
+                            "children": {
+                                "aws-ecs-cluster": {
+                                    "name": "ECS Cluster",
+                                    "type": "aws-ecs-cluster",
+                                    "children": {
+                                        "aws-ecs-service": {
+                                            "name": "ECS Service",
+                                            "type": "aws-ecs-service",
+                                            "children": {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    script = create_diagram_script(json.dumps(hierarchy))
+    assert "ECS(" not in script  # ECS clusters are clusters only
+    assert "ElasticContainerServiceService(" not in script  # ECS services are clusters only
+    assert "Cluster(" in script  # Check for cluster creation
+
+
+def test_create_diagram_script_invalid_json():
+    """Test script generation with invalid JSON."""
+    with pytest.raises(json.JSONDecodeError):
+        create_diagram_script("invalid json")
 
 
 @pytest.fixture(autouse=True)
 def cleanup():
-    """Clean up generated diagram files after each test."""
+    """Clean up any generated files after each test."""
     yield
-    # Remove any generated diagram files
+    import os
     for file in os.listdir():
         if file.endswith(".png"):
             os.remove(file)
